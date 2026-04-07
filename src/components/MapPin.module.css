@@ -1,0 +1,14 @@
+.pin {
+    position: absolute;
+    font-size: larger;
+    line-height: 0;
+    color: white;
+
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+}
+
+.hidden {
+    display: none;
+}

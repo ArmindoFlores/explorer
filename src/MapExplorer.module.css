@@ -1,0 +1,86 @@
+.mapContainer {
+    position: relative;
+
+    height: 60em;
+    width: 80em;
+    overflow-y: hidden;
+
+    border: 1px solid black;
+
+    --canvas-background: rgb(25, 25, 25, 0.7);
+}
+
+.canvasMapOverlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.canvasMapOverlay > * {
+    pointer-events: auto;
+}
+
+.canvasControlOverlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    
+    pointer-events: none;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
+    padding: 1em;
+}
+
+.canvasControlOverlay > * {
+    pointer-events: auto;
+}
+
+.canvasControlOverlayColumn {
+    display: flex;
+    flex-direction: column;
+}
+
+.mapCanvas {
+    width: 100%;
+    height: 100%;
+    background-color: var(--canvas-background);
+}
+
+.dragging {
+    cursor: grabbing;
+}
+
+.draggable {
+    cursor: grab;
+}
+
+.button {
+    background-color: #000000;
+    color: #eeeeee;
+    border: none;
+    font-size: larger;
+    width: 2em;
+    height: 2em;
+
+    -webkit-box-shadow: 4px 4px 8px 2px rgba(0,0,0,0.5); 
+    box-shadow: 4px 4px 8px 2px rgba(0,0,0,0.5);
+
+    transition: outline-color 0.15s ease-in-out;
+    outline: 1px solid transparent;
+
+    cursor: pointer;
+}
+
+.button:hover {
+    outline: 1px solid #eeeeee;
+}
