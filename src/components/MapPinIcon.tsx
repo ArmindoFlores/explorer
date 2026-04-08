@@ -1,23 +1,26 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import styles from "./MapPin.module.css";
+import styles from "./MapPinIcon.module.css";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { Camera, Vector2 } from "../utils";
+import type { Vector2 } from "../utils";
+import { v4 as uuidv4 } from 'uuid';
 
-export interface MapPinType {
+// eslint-disable-next-line react-refresh/only-export-components
+export class MapPin {
     id: string;
     x: number;
     y: number;
     minZoom?: number;
     maxZoom?: number;
-}
-
-function transformCoords(coordinates: Vector2, camera: Camera): Vector2 {
-    return {
-        x: coordinates.x * camera.zoom + camera.x,
-        y: coordinates.y * camera.zoom + camera.y,
-    };
-}
+    
+    constructor(x: number, y: number, id: string | undefined = undefined, maxZoom: number | undefined = undefined, minZoom: number | undefined = undefined) {
+        this.id = id ?? uuidv4();
+        this.x = x;
+        this.y = y;
+        this.maxZoom = maxZoom;
+        this.minZoom = minZoom;
+    }
+};
 
 function anchor(position: Vector2, size: Vector2): Vector2 {
     return {
@@ -26,16 +29,17 @@ function anchor(position: Vector2, size: Vector2): Vector2 {
     };
 }
 
-export function MapPin({ pin, camera }: { pin: MapPinType, camera: Camera }) {
+export function MapPinIcon({ pin, worldToCanvas, zoom }: { pin: MapPin, worldToCanvas: (coords: Vector2) => Vector2, zoom: number }) {
     const self = useRef<HTMLDivElement>(null);
 
     const [selfSize, setSelfSize] = useState<Vector2>({ x: 0, y: 0 });
 
-    const visible = useMemo(() => {
-        return (pin.maxZoom === undefined || camera.zoom <= pin.maxZoom) && (pin.minZoom === undefined || camera.zoom <= pin.minZoom);
-    }, [pin.minZoom, pin.maxZoom, camera.zoom]);
+    const {x, y} = useMemo(() => anchor(worldToCanvas(pin), selfSize), [worldToCanvas, pin, selfSize]);
 
-    const {x, y} = anchor(transformCoords(pin, camera), selfSize);
+    const visible = useMemo(() => {
+        return (pin.maxZoom === undefined || zoom <= pin.maxZoom) && (pin.minZoom === undefined || zoom <= pin.minZoom);
+    }, [pin.minZoom, pin.maxZoom, zoom]);
+
 
     useLayoutEffect(() => {
         if (self.current === null) return;

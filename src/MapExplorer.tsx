@@ -1,8 +1,9 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import styles from "./MapExplorer.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faExpand, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
-import { MapPin, type MapPinType } from "./components/MapPin";
+import { faExpand, faLocationDot, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
+import { MapPin, MapPinIcon } from "./components/MapPinIcon";
+import type { Vector2 } from "./utils";
 
 const ZOOM_SENSITIVITY = 1200;
 
@@ -20,15 +21,14 @@ interface CanvasControlOverlayProps {
     fitToScreen: () => void;
     toggleLocked: () => void;
     locked: boolean;
+    toggleAddLocation: () => void;
+    isAddingLocation: boolean;
 }
 
 interface CanvasMapOverlayProps {
-    pins: MapPinType[];
-    camera: {
-        x: number;
-        y: number;
-        zoom: number;
-    };
+    pins: MapPin[];
+    worldToCanvas: (coords: Vector2) => Vector2;
+    zoom: number;
 }
 
 function fitZoom(canvas: HTMLCanvasElement, img: HTMLImageElement, mode: FitMode = "fit"): number {
@@ -60,6 +60,10 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
                 <button className={styles.button} title="Fit to screen" onClick={() => props.fitToScreen()}>
                     <FontAwesomeIcon icon={faExpand} />
                 </button>
+                <br />
+                <button className={`${styles.button} ${props.isAddingLocation ? styles.active : ""}`} title="Add location" onClick={() => props.toggleAddLocation()}>
+                    <FontAwesomeIcon icon={faLocationDot} />
+                </button>
             </div>
             <div className={styles.canvasControlOverlayColumn}>
                 <button className={styles.button} title="Toggle fullscreen">
@@ -76,10 +80,17 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
 const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
     return <div className={styles.canvasMapOverlay}>
         {
-            props.pins.map(pin => <MapPin key={pin.id} pin={pin} camera={props.camera} />)
+            props.pins.map(pin => (
+                <MapPinIcon
+                    key={pin.id}
+                    pin={pin}
+                    worldToCanvas={props.worldToCanvas}
+                    zoom={props.zoom}
+                />
+            ))
         }
     </div>;
-})
+});
 
 export function MapExplorer(props: MapExplorerProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,11 +98,38 @@ export function MapExplorer(props: MapExplorerProps) {
     const zoomRef = useRef<number>(1);
     const panRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const lastMousePosition = useRef({ x: 0, y: 0 });
+    const isClick = useRef(false);
 
     const [isDragging, setIsDragging] = useState(false);
     const [mapLocked, setMapLocked] = useState(true);
-    const [mapPins, setMapPins] = useState<MapPinType[]>([{x: 1390, y: 1460, id: "hello"}]);
+    const [isAddingLocation, setIsAddingLocation] = useState(false);
+    const [mapPins, setMapPins] = useState<MapPin[]>([]);
     const [camera, _updateCamera] = useState({ x: 0, y: 0, zoom: 1 });
+
+    const clientToCanvas = useCallback((coordinates: Vector2): Vector2 => {
+        if (canvasRef.current === null) {
+            throw new Error("canvas is not initialized");
+        }
+        const rect = canvasRef.current.getBoundingClientRect();
+        return {
+            x: coordinates.x - rect.left,
+            y: coordinates.y - rect.top,
+        };
+    }, []);
+
+    const canvasToWorld = useCallback((coordinates: Vector2): Vector2 => {
+        return {
+            x: (coordinates.x - camera.x) / camera.zoom,
+            y: (coordinates.y - camera.y) / camera.zoom,
+        };
+    }, [camera]);
+
+    const worldToCanvas = useCallback((coordinates: Vector2): Vector2 => {
+        return {
+            x: coordinates.x * camera.zoom + camera.x,
+            y: coordinates.y * camera.zoom + camera.y,
+        };
+    }, [camera]);
 
     const draw = useCallback(() => {
         const canvas = canvasRef.current;
@@ -145,15 +183,31 @@ export function MapExplorer(props: MapExplorerProps) {
     const toggleLocked = useCallback(() => {
         setMapLocked(old => !old);
     }, []);
+    
+    const toggleAddLocation = useCallback(() => {
+        setIsAddingLocation(old => !old);
+    }, []);
 
     const handleMapStartDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
         setIsDragging(true);
         lastMousePosition.current = { x: event.clientX, y: event.clientY };
+        isClick.current = true;
     }, []);
+    
+    const handleMapClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!isAddingLocation) return;
 
-    const handleMapStopDrag = useCallback(() => {
+        const { x, y } = canvasToWorld(clientToCanvas({x: event.clientX, y: event.clientY}));
+        setMapPins(pins => [...pins, new MapPin(x, y)]);
+
+    }, [isAddingLocation, canvasToWorld, clientToCanvas]);
+
+    const handleMapStopDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isClick.current) {
+            handleMapClick(event);
+        }
         setIsDragging(false);
-    }, []);
+    }, [handleMapClick]);
 
     const handleMapDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!isDragging) return;
@@ -166,6 +220,8 @@ export function MapExplorer(props: MapExplorerProps) {
         panRef.current.y += dy;
 
         lastMousePosition.current = { x: event.clientX, y: event.clientY };
+        isClick.current = false;
+
         updateCamera();
         draw();
     }, [isDragging, draw, updateCamera]);
@@ -227,18 +283,20 @@ export function MapExplorer(props: MapExplorerProps) {
             <div className={styles.mapContainer} style={{ width: props.width, height: props.height }}>
                 <canvas
                     ref={canvasRef}
-                    className={`${styles.mapCanvas} ${isDragging ? styles.dragging : styles.draggable}`}
+                    className={`${styles.mapCanvas} ${isDragging ? styles.dragging : styles.draggable} ${isAddingLocation ? styles.newLocation : ""}`}
                     onMouseDown={handleMapStartDrag}
                     onMouseUp={handleMapStopDrag}
                     onMouseMove={handleMapDrag}
                     onWheel={handleMapZoom}
                 />
-                <CanvasMapOverlay pins={mapPins} camera={camera} />
+                <CanvasMapOverlay pins={mapPins} worldToCanvas={worldToCanvas} zoom={camera.zoom} />
                 <CanvasControlOverlay
                     zoom={zoom}
                     fitToScreen={fitToScreen}
                     toggleLocked={toggleLocked}
                     locked={mapLocked}
+                    toggleAddLocation={toggleAddLocation}
+                    isAddingLocation={isAddingLocation}
                 />
             </div>
         </>

@@ -56,13 +56,18 @@
     background-color: var(--canvas-background);
 }
 
+.draggable {
+    cursor: grab;
+}
+
+.newLocation {
+    cursor: copy;
+}
+
 .dragging {
     cursor: grabbing;
 }
 
-.draggable {
-    cursor: grab;
-}
 
 .button {
     background-color: #000000;
@@ -83,4 +88,8 @@
 
 .button:hover {
     outline: 1px solid #eeeeee;
+}
+
+.button.active {
+    outline: 2px solid #eeeeee;
 }
