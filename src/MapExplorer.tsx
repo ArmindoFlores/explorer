@@ -18,6 +18,8 @@ export interface MapExplorerProps {
 interface CanvasControlOverlayProps {
     zoom: (amount: number) => void;
     fitToScreen: () => void;
+    toggleLocked: () => void;
+    locked: boolean;
 }
 
 interface CanvasMapOverlayProps {
@@ -63,6 +65,9 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
                 <button className={styles.button} title="Toggle fullscreen">
                     <FontAwesomeIcon icon={faMaximize} />
                 </button>
+                <button className={styles.button} title={props.locked ? "Unlock map" : "Lock map"} onClick={() => props.toggleLocked()}>
+                    <FontAwesomeIcon icon={faMaximize} />
+                </button>
             </div>
         </div>
     );
@@ -84,6 +89,7 @@ export function MapExplorer(props: MapExplorerProps) {
     const lastMousePosition = useRef({ x: 0, y: 0 });
 
     const [isDragging, setIsDragging] = useState(false);
+    const [mapLocked, setMapLocked] = useState(true);
     const [mapPins, setMapPins] = useState<MapPinType[]>([{x: 1390, y: 1460, id: "hello"}]);
     const [camera, _updateCamera] = useState({ x: 0, y: 0, zoom: 1 });
 
@@ -135,6 +141,10 @@ export function MapExplorer(props: MapExplorerProps) {
         updateCamera();
         draw();
     }, [draw, updateCamera]);
+
+    const toggleLocked = useCallback(() => {
+        setMapLocked(old => !old);
+    }, []);
 
     const handleMapStartDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
         setIsDragging(true);
@@ -224,7 +234,12 @@ export function MapExplorer(props: MapExplorerProps) {
                     onWheel={handleMapZoom}
                 />
                 <CanvasMapOverlay pins={mapPins} camera={camera} />
-                <CanvasControlOverlay zoom={zoom} fitToScreen={fitToScreen} />
+                <CanvasControlOverlay
+                    zoom={zoom}
+                    fitToScreen={fitToScreen}
+                    toggleLocked={toggleLocked}
+                    locked={mapLocked}
+                />
             </div>
         </>
     );

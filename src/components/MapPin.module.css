@@ -7,6 +7,12 @@
     cursor: pointer;
     padding: 0;
     margin: 0;
+
+    transition: transform 0.15s ease-out;
+}
+
+.pin:hover {
+    transform: scale(1.25);
 }
 
 .hidden {
