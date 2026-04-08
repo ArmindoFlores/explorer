@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import styles from "./MapExplorer.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faExpand, faLocationDot, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
+import { faExpand, faLocationDot, faLock, faLockOpen, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
 import { MapPin, MapPinIcon } from "./components/MapPinIcon";
 import type { Vector2 } from "./utils";
 
@@ -60,17 +60,30 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
                 <button className={styles.button} title="Fit to screen" onClick={() => props.fitToScreen()}>
                     <FontAwesomeIcon icon={faExpand} />
                 </button>
-                <br />
-                <button className={`${styles.button} ${props.isAddingLocation ? styles.active : ""}`} title="Add location" onClick={() => props.toggleAddLocation()}>
-                    <FontAwesomeIcon icon={faLocationDot} />
-                </button>
+                {
+                    !props.locked && <>
+                        <br />
+                        <button
+                            className={`${styles.button} ${props.isAddingLocation ? styles.active : ""}`}
+                            title="Add location"
+                            onClick={() => props.toggleAddLocation()}
+                        >
+                            <FontAwesomeIcon icon={faLocationDot} />
+                        </button>
+                    </>
+                }
             </div>
             <div className={styles.canvasControlOverlayColumn}>
                 <button className={styles.button} title="Toggle fullscreen">
                     <FontAwesomeIcon icon={faMaximize} />
                 </button>
-                <button className={styles.button} title={props.locked ? "Unlock map" : "Lock map"} onClick={() => props.toggleLocked()}>
-                    <FontAwesomeIcon icon={faMaximize} />
+                <br />
+                <button
+                    className={styles.button}
+                    title={props.locked ? "Unlock map" : "Lock map"}
+                    onClick={() => props.toggleLocked()}
+                >
+                    <FontAwesomeIcon icon={props.locked ? faLockOpen : faLock} />
                 </button>
             </div>
         </div>
