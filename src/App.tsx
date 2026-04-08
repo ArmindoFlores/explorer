@@ -1,4 +1,4 @@
-import { MapExplorer } from "./MapExplorer";
+import { MapExplorer } from "./components/MapExplorer";
 import styles from  "./App.module.css";
 
 export function App() {

@@ -2,8 +2,8 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import styles from "./MapExplorer.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExpand, faLocationDot, faLock, faLockOpen, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
-import { MapPin, MapPinIcon } from "./components/MapPinIcon";
-import type { Vector2 } from "./utils";
+import { MapPin, MapPinIcon } from "./MapPinIcon";
+import type { Vector2 } from "../utils";
 
 const ZOOM_SENSITIVITY = 1200;
 
@@ -105,6 +105,26 @@ const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
     </div>;
 });
 
+function isMouseEvent<E extends HTMLElement>(event: React.MouseEvent<E> | React.TouchEvent<E>): event is React.MouseEvent<E> {
+    return (event as React.MouseEvent<E>).clientX !== undefined && (event as React.MouseEvent<E>).clientY !== undefined;
+}
+
+function getEventCoordinates<E extends HTMLElement>(event: React.MouseEvent<E> | React.TouchEvent<E>): Vector2 {
+    if (isMouseEvent(event)) {
+        return { x: event.clientX, y: event.clientY };
+    }
+    if (event.type === "touchend") {
+        return {
+            x: event.changedTouches[0].clientX,
+            y: event.changedTouches[0].clientY
+        };
+    }
+    return {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY
+    };
+}
+
 export function MapExplorer(props: MapExplorerProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
@@ -201,38 +221,40 @@ export function MapExplorer(props: MapExplorerProps) {
         setIsAddingLocation(old => !old);
     }, []);
 
-    const handleMapStartDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const handleMapStartDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+        const { x, y } = getEventCoordinates(event);
         setIsDragging(true);
-        lastMousePosition.current = { x: event.clientX, y: event.clientY };
+        lastMousePosition.current = { x, y };
         isClick.current = true;
     }, []);
     
-    const handleMapClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const handleMapClick = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+        const { x: clientX, y: clientY } = getEventCoordinates(event);
         if (!isAddingLocation) return;
 
-        const { x, y } = canvasToWorld(clientToCanvas({x: event.clientX, y: event.clientY}));
+        const { x, y } = canvasToWorld(clientToCanvas({x: clientX, y: clientY}));
         setMapPins(pins => [...pins, new MapPin(x, y)]);
 
     }, [isAddingLocation, canvasToWorld, clientToCanvas]);
 
-    const handleMapStopDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const handleMapStopDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (isClick.current) {
             handleMapClick(event);
         }
         setIsDragging(false);
     }, [handleMapClick]);
 
-    const handleMapDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const handleMapDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDragging) return;
 
-        event.preventDefault();
-        const dx = event.clientX - lastMousePosition.current.x;
-        const dy = event.clientY - lastMousePosition.current.y;
+        const { x: clientX, y: clientY } = getEventCoordinates(event);
+        const dx = clientX - lastMousePosition.current.x;
+        const dy = clientY - lastMousePosition.current.y;
 
         panRef.current.x += dx;
         panRef.current.y += dy;
 
-        lastMousePosition.current = { x: event.clientX, y: event.clientY };
+        lastMousePosition.current = { x: clientX, y: clientY };
         isClick.current = false;
 
         updateCamera();
@@ -301,6 +323,9 @@ export function MapExplorer(props: MapExplorerProps) {
                     onMouseUp={handleMapStopDrag}
                     onMouseMove={handleMapDrag}
                     onWheel={handleMapZoom}
+                    onTouchStart={handleMapStartDrag}
+                    onTouchEnd={handleMapStopDrag}
+                    onTouchMove={handleMapDrag}
                 />
                 <CanvasMapOverlay pins={mapPins} worldToCanvas={worldToCanvas} zoom={camera.zoom} />
                 <CanvasControlOverlay
