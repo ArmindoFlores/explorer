@@ -4,6 +4,7 @@ import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Vector2 } from "../utils";
 import { v4 as uuidv4 } from 'uuid';
+import { useMapExplorer } from "./MapExplorerContext";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export class MapPin {
@@ -29,16 +30,17 @@ function anchor(position: Vector2, size: Vector2): Vector2 {
     };
 }
 
-export function MapPinIcon({ pin, worldToCanvas, zoom }: { pin: MapPin, worldToCanvas: (coords: Vector2) => Vector2, zoom: number }) {
+export function MapPinIcon({ pin }: { pin: MapPin }) {
     const self = useRef<HTMLDivElement>(null);
+    const { $worldToCanvas, camera } = useMapExplorer();
 
     const [selfSize, setSelfSize] = useState<Vector2>({ x: 0, y: 0 });
 
-    const {x, y} = useMemo(() => anchor(worldToCanvas(pin), selfSize), [worldToCanvas, pin, selfSize]);
+    const {x, y} = useMemo(() => anchor($worldToCanvas(pin), selfSize), [$worldToCanvas, pin, selfSize]);
 
     const visible = useMemo(() => {
-        return (pin.maxZoom === undefined || zoom <= pin.maxZoom) && (pin.minZoom === undefined || zoom <= pin.minZoom);
-    }, [pin.minZoom, pin.maxZoom, zoom]);
+        return (pin.maxZoom === undefined || camera.zoom <= pin.maxZoom) && (pin.minZoom === undefined || camera.zoom <= pin.minZoom);
+    }, [pin.minZoom, pin.maxZoom, camera.zoom]);
 
 
     useLayoutEffect(() => {
