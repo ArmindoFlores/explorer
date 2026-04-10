@@ -36,10 +36,10 @@ export class MapPin {
     }
 };
 
-function anchor(position: Vector2, size: Vector2): Vector2 {
+function anchor(position: Vector2, size: Vector2, anchor: "top" | "bottom" = "top"): Vector2 {
     return {
         x: position.x - size.x / 2,
-        y: position.y - size.y,
+        y: position.y + (anchor === "bottom" ? 0 : -1) * size.y,
     };
 }
 
@@ -55,13 +55,17 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
     const [pinHovered, setPinHovered] = useState(false);
 
     const pinCanvasPosition = useMemo(() => $worldToCanvas(pin), [$worldToCanvas, pin]);
+    const popupAnchorPosition = useMemo(
+        () => pinCanvasPosition.y >= $canvasSize.y / 2 ? "top" : "bottom",
+        [$canvasSize.y, pinCanvasPosition]
+    );
     const {x: pinX, y: pinY} = useMemo(() => anchor(pinCanvasPosition, pinSize), [pinCanvasPosition, pinSize]);
     const {x: popupX, y: popupY} = useMemo(() => {
-        if (pinCanvasPosition.y >= $canvasSize.y / 2) {
-            return anchor({ x: pinCanvasPosition.x, y: pinCanvasPosition.y - pinSize.y }, popupSize);
+        if (popupAnchorPosition === "top") {
+            return anchor({ x: pinCanvasPosition.x, y: pinCanvasPosition.y - pinSize.y }, popupSize, popupAnchorPosition);
         }
-        return anchor({ x: pinCanvasPosition.x, y: pinCanvasPosition.y + pinSize.y }, popupSize);       
-    }, [$canvasSize.y, pinCanvasPosition, popupSize, pinSize.y]);
+        return anchor({ x: pinCanvasPosition.x, y: pinCanvasPosition.y }, popupSize, popupAnchorPosition);
+    }, [popupAnchorPosition, pinCanvasPosition, popupSize, pinSize.y]);
 
     if (!pinHovered && !popupHovered && popupVisible) {
         setPopupVisible(false);
@@ -90,7 +94,7 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
                 onMouseEnter={() => setPopupHovered(true)}
                 onMouseLeave={() => setPopupHovered(false)}
             >
-                <div className={styles.popup}>
+                <div className={`${styles.popup} ${popupAnchorPosition === "bottom" ? styles.anchorBottom : styles.anchorTop}`}>
                     <b>{pin.name}</b>
                     <div>
                         {
