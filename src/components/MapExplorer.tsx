@@ -1,18 +1,22 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
-import styles from "./MapExplorer.module.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faExpand, faLocationDot, faLock, faLockOpen, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
 import { MapPin, MapPinIcon } from "./MapPinIcon";
+import { faExpand, faLocationDot, faLock, faLockOpen, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { Vector2 } from "../utils";
+import styles from "./MapExplorer.module.css";
 import { useMapExplorer } from "./MapExplorerContext";
 
 const ZOOM_SENSITIVITY = 1200;
+
+export type ResizeValue = "none" | "both" | "horizontal" | "vertical";
 
 export interface MapExplorerProps {
     width?: number | string;
     height?: number | string;
     className?: string | undefined;
     image?: string;
+    resize?: ResizeValue;
 }
 
 interface CanvasControlOverlayProps {
@@ -195,25 +199,23 @@ export function MapExplorer(props: MapExplorerProps) {
     }, [props.image, loadImage, $canvas]);
 
     return (
-        <>
-            <div className={styles.mapContainer} style={{ width: props.width, height: props.height }}>
-                <canvas
-                    ref={(c) => $setCanvas(c)}
-                    className={`${styles.mapCanvas} ${isDragging ? styles.dragging : styles.draggable} ${isAddingLocation ? styles.newLocation : ""}`}
-                    onMouseDown={handleMapStartDrag}
-                    onMouseUp={handleMapStopDrag}
-                    onMouseMove={handleMapDrag}
-                    onWheel={handleMapZoom}
-                    onTouchStart={handleMapStartDrag}
-                    onTouchEnd={handleMapStopDrag}
-                    onTouchMove={handleMapDrag}
-                />
-                <CanvasMapOverlay />
-                <CanvasControlOverlay
-                    toggleAddLocation={toggleAddLocation}
-                    isAddingLocation={isAddingLocation}
-                />
-            </div>
-        </>
+        <div className={styles.mapContainer} style={{ width: props.width, height: props.height, resize: props.resize }} >
+            <canvas
+                ref={(c) => $setCanvas(c)}
+                className={`${styles.mapCanvas} ${isDragging ? styles.dragging : styles.draggable} ${isAddingLocation ? styles.newLocation : ""}`}
+                onMouseDown={handleMapStartDrag}
+                onMouseUp={handleMapStopDrag}
+                onMouseMove={handleMapDrag}
+                onWheel={handleMapZoom}
+                onTouchStart={handleMapStartDrag}
+                onTouchEnd={handleMapStopDrag}
+                onTouchMove={handleMapDrag}
+            />
+            <CanvasMapOverlay />
+            <CanvasControlOverlay
+                toggleAddLocation={toggleAddLocation}
+                isAddingLocation={isAddingLocation}
+            />
+        </div>
     );
 }

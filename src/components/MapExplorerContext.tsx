@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Camera, Vector2 } from "../utils";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
 import type { MapPin } from "./MapPinIcon";
 
 export type FitMode = "fit" | "cover";
@@ -21,6 +22,7 @@ export interface MapExplorerContextType {
     
     // internals
     $canvas: HTMLCanvasElement | null;
+    $canvasSize: Vector2;
     $setCanvas: (canvas: HTMLCanvasElement | null) => void;
     $draw: () => void;
     $updateCamera: () => void;
@@ -51,12 +53,13 @@ export function MapExplorerContextProvider({ children }: { children: React.React
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const zoomRef = useRef<number>(1);
-    const panRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const panRef = useRef<Vector2>({ x: 0, y: 0 });
 
     const [canvas, setCanvas] = useState<HTMLCanvasElement|null>(null);
-    const [locked, setLocked] = useState(true);
+    const [locked, setLocked] = useState(false);
     const [pins, setPins] = useState<MapPin[]>([]);
     const [camera, _setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 });
+    const [canvasSize, setCanvasSize] = useState<Vector2>({ x: 0, y: 0 });
 
     useLayoutEffect(() => {
         canvasRef.current = canvas;
@@ -198,6 +201,7 @@ export function MapExplorerContextProvider({ children }: { children: React.React
             const { width, height } = entries[0].contentRect;
             canvas.width = width;
             canvas.height = height;
+            setCanvasSize({ x: canvas.width, y: canvas.height });
             if (imageRef.current?.complete) draw();
         });
 
@@ -229,6 +233,7 @@ export function MapExplorerContextProvider({ children }: { children: React.React
         $draw: draw,
         $clientToCanvas: clientToCanvas,
         $canvasToWorld: canvasToWorld,
+        $canvasSize: canvasSize,
         $worldToCanvas: worldToCanvas,
     }), [
         camera,
@@ -249,6 +254,7 @@ export function MapExplorerContextProvider({ children }: { children: React.React
         draw,
         clientToCanvas,
         canvasToWorld,
+        canvasSize,
         worldToCanvas,
     ]);
 
