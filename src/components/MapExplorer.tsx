@@ -3,7 +3,7 @@ import { faExpand, faLocationDot, faLock, faLockOpen, faMagnifyingGlassMinus, fa
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { Vector2 } from "../utils";
+import { getMouseEventCoordinates } from "../utils";
 import styles from "./MapExplorer.module.css";
 import { useMapExplorer } from "./MapExplorerContext";
 
@@ -30,6 +30,7 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
         fitToScreen,
         locked,
         toggleLocked,
+        config,
     } = useMapExplorer();
 
     return (
@@ -46,7 +47,7 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
                     <FontAwesomeIcon icon={faExpand} />
                 </button>
                 {
-                    !locked && <>
+                    !locked && config.canEdit && <>
                         <br />
                         <button
                             className={`${styles.button} ${props.isAddingLocation ? styles.active : ""}`}
@@ -62,14 +63,18 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
                 <button className={styles.button} title="Toggle fullscreen">
                     <FontAwesomeIcon icon={faMaximize} />
                 </button>
-                <br />
-                <button
-                    className={styles.button}
-                    title={locked ? "Unlock map" : "Lock map"}
-                    onClick={() => toggleLocked()}
-                >
-                    <FontAwesomeIcon icon={locked ? faLockOpen : faLock} />
-                </button>
+                {
+                    config.canEdit && <>
+                        <br />
+                        <button
+                            className={styles.button}
+                            title={locked ? "Unlock map" : "Lock map"}
+                            onClick={() => toggleLocked()}
+                        >
+                            <FontAwesomeIcon icon={locked ? faLockOpen : faLock} />
+                        </button>
+                    </>
+                }
             </div>
         </div>
     );
@@ -89,26 +94,6 @@ const CanvasMapOverlay = memo(() => {
         }
     </div>;
 });
-
-function isMouseEvent<E extends HTMLElement>(event: React.MouseEvent<E> | React.TouchEvent<E>): event is React.MouseEvent<E> {
-    return (event as React.MouseEvent<E>).clientX !== undefined && (event as React.MouseEvent<E>).clientY !== undefined;
-}
-
-function getEventCoordinates<E extends HTMLElement>(event: React.MouseEvent<E> | React.TouchEvent<E>): Vector2 {
-    if (isMouseEvent(event)) {
-        return { x: event.clientX, y: event.clientY };
-    }
-    if (event.type === "touchend") {
-        return {
-            x: event.changedTouches[0].clientX,
-            y: event.changedTouches[0].clientY
-        };
-    }
-    return {
-        x: event.touches[0].clientX,
-        y: event.touches[0].clientY
-    };
-}
 
 export function MapExplorer(props: MapExplorerProps) {
     const {
@@ -132,14 +117,14 @@ export function MapExplorer(props: MapExplorerProps) {
     }, []);
 
     const handleMapStartDrag = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-        const { x, y } = getEventCoordinates(event);
+        const { x, y } = getMouseEventCoordinates(event);
         setIsDragging(true);
         lastMousePosition.current = { x, y };
         isClick.current = true;
     }, []);
     
     const handleMapClick = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-        const { x: clientX, y: clientY } = getEventCoordinates(event);
+        const { x: clientX, y: clientY } = getMouseEventCoordinates(event);
         if (!isAddingLocation) return;
 
         const { x, y } = $canvasToWorld($clientToCanvas({x: clientX, y: clientY}));
@@ -158,7 +143,7 @@ export function MapExplorer(props: MapExplorerProps) {
         if (!isDragging) return;
 
         setCamera(camera => {
-            const { x: clientX, y: clientY } = getEventCoordinates(event);
+            const { x: clientX, y: clientY } = getMouseEventCoordinates(event);
             const dx = clientX - lastMousePosition.current.x;
             const dy = clientY - lastMousePosition.current.y;
     

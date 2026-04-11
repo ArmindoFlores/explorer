@@ -1,7 +1,7 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { Vector2 } from "../utils";
+import { getMouseEventCoordinates, type Vector2 } from "../utils";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import styles from "./MapPinIcon.module.css";
 import { useMapExplorer } from "./MapExplorerContext";
@@ -46,13 +46,16 @@ function anchor(position: Vector2, size: Vector2, anchor: "top" | "bottom" = "to
 export function MapPinIcon({ pin }: { pin: MapPin }) {
     const pinRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
-    const { $canvasSize, $worldToCanvas, camera } = useMapExplorer();
+    const isClick = useRef(false);
+    const lastMousePosition = useRef<Vector2>({x: 0, y: 0});
+    const { $canvasSize, $worldToCanvas, camera, editPin, locked, config } = useMapExplorer();
 
     const [pinSize, setPinSize] = useState<Vector2>({ x: 0, y: 0 });
     const [popupSize, setPopupSize] = useState<Vector2>({ x: 0, y: 0 });
     const [popupVisible, setPopupVisible] = useState(true);
     const [popupHovered, setPopupHovered] = useState(false);
     const [pinHovered, setPinHovered] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     const pinCanvasPosition = useMemo(() => $worldToCanvas(pin), [$worldToCanvas, pin]);
     const popupAnchorPosition = useMemo(
@@ -67,13 +70,48 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
         return anchor({ x: pinCanvasPosition.x, y: pinCanvasPosition.y }, popupSize, popupAnchorPosition);
     }, [popupAnchorPosition, pinCanvasPosition, popupSize, pinSize.y]);
 
-    if (!pinHovered && !popupHovered && popupVisible) {
+    if (((!pinHovered && !popupHovered) || isDragging) && popupVisible) {
         setPopupVisible(false);
     }
 
     const visible = useMemo(() => {
         return (pin.maxZoom === undefined || camera.zoom <= pin.maxZoom) && (pin.minZoom === undefined || camera.zoom <= pin.minZoom);
     }, [pin.minZoom, pin.maxZoom, camera.zoom]);
+
+    const handleMapPinStartDrag = useCallback((event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
+        const { x, y } = getMouseEventCoordinates(event);
+        setIsDragging(true);
+        lastMousePosition.current = { x, y };
+        isClick.current = true;
+    }, []);
+    
+    const handleMapPinClick = useCallback((event: MouseEvent | React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
+        if (event.type.startsWith("touch")) {
+            // on mobile, this should make the popup visible
+            setPopupVisible(true);
+            event.preventDefault();
+        }
+    }, []);
+
+    const handleMapPinStopDrag = useCallback((event: MouseEvent | React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
+        if (isClick.current) {
+            handleMapPinClick(event);
+        }
+        setIsDragging(false);
+    }, [handleMapPinClick]);
+
+    const handleMapPinDrag = useCallback((event: MouseEvent | React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
+        if (!isDragging) return;
+
+        const { x: clientX, y: clientY } = getMouseEventCoordinates(event);
+        const dx = clientX - lastMousePosition.current.x;
+        const dy = clientY - lastMousePosition.current.y;
+
+        lastMousePosition.current = { x: clientX, y: clientY };
+        isClick.current = false;
+
+        editPin(pin.id, oldPin => ({ ...oldPin, x: oldPin.x + dx / camera.zoom, y: oldPin.y + dy / camera.zoom }));
+    }, [isDragging, editPin, pin.id, camera.zoom]);
 
     useLayoutEffect(() => {
         if (pinRef.current === null) return;
@@ -84,6 +122,18 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
         if (popupRef.current === null) return;
         setPopupSize({ x: popupRef.current.clientWidth, y: popupRef.current.clientHeight });
     }, [popupVisible]);
+
+    useEffect(() => {
+        if (!isDragging) return;
+
+        document.addEventListener('mousemove', handleMapPinDrag);
+        document.addEventListener('mouseup', handleMapPinStopDrag);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMapPinDrag);
+            document.removeEventListener('mouseup', handleMapPinStopDrag);
+        };
+    }, [handleMapPinDrag, handleMapPinStopDrag, isDragging]);
     
     return (
         <>
@@ -109,8 +159,12 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
                 style={{ top: pinY, left: pinX }}
                 onMouseEnter={() => { setPinHovered(true); setPopupVisible(true); }}
                 onMouseLeave={() => setPinHovered(false)}
+                onMouseDown={!locked && config.canEdit ? handleMapPinStartDrag : undefined}
+                onTouchStart={!locked && config.canEdit ? handleMapPinStartDrag : undefined}
+                onTouchEnd={handleMapPinStopDrag}
+                onTouchMove={handleMapPinDrag}
             >
-                <FontAwesomeIcon icon={faLocationDot} />
+                <FontAwesomeIcon icon={faLocationDot} stroke="black" strokeWidth={20} />
             </div>
         </>
     );

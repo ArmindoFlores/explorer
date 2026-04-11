@@ -1,20 +1,31 @@
-import type { Camera, Vector2 } from "../utils";
+import { deepMerge, type Camera, type Vector2 } from "../utils";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { MapPin } from "./MapPinIcon";
 
 export type FitMode = "fit" | "cover";
 
+export interface MapExplorerConfig {
+    canEdit: boolean;
+}
+
+export interface MapExplorerContextProviderProps {
+    children: React.ReactNode;
+    config?: Partial<MapExplorerConfig>;
+}
+
 export interface MapExplorerContextType {
     camera: Camera;
     pins: MapPin[];
     locked: boolean;
+    config: MapExplorerConfig;
     
     loadImage: (src: string) => void;
     setCamera: (cameraOrSetter: Camera | ((oldCamera: Camera) => Camera)) => void;
     setPins: (pinsOrSetter: MapPin[] | ((oldMapPins: MapPin[]) => MapPin[])) => void;
     addPin: (pin: MapPin) => void;
     removePin: (pinId: string) => void;
+    editPin: (pinId: string, pinOrSetter: MapPin | ((oldPin: MapPin) => MapPin)) => void;
     setLocked: (lockedOrSetter: boolean | ((oldLocked: boolean) => boolean)) => void;
     toggleLocked: () => void;
     zoom: (amount: number, redraw?: boolean) => number;
@@ -34,6 +45,10 @@ export interface MapExplorerContextType {
 const MapExplorerContext = createContext<MapExplorerContextType|null>(null);
 const useMapExplorer_ = () => useContext(MapExplorerContext);
 
+const DEFAULT_MAP_EXPLORER_CONFIG: MapExplorerConfig = {
+    canEdit: true,
+};
+
 function fitZoom(canvas: HTMLCanvasElement, img: HTMLImageElement, mode: FitMode = "fit"): number {
     const maxZoomX = canvas.width / img.width;
     const maxZoomY = canvas.height / img.height;
@@ -49,7 +64,7 @@ function fitPan(canvas: HTMLCanvasElement, img: HTMLImageElement, zoom: number, 
     };
 }
 
-export function MapExplorerContextProvider({ children }: { children: React.ReactNode }) {
+export function MapExplorerContextProvider(props: MapExplorerContextProviderProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const zoomRef = useRef<number>(1);
@@ -61,6 +76,8 @@ export function MapExplorerContextProvider({ children }: { children: React.React
     const [camera, _setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 });
     const [canvasSize, setCanvasSize] = useState<Vector2>({ x: 0, y: 0 });
 
+    const fullConfig = useMemo(() => deepMerge(DEFAULT_MAP_EXPLORER_CONFIG, props.config ?? {}), [props.config]);
+
     useLayoutEffect(() => {
         canvasRef.current = canvas;
     }, [canvas]);
@@ -71,6 +88,21 @@ export function MapExplorerContextProvider({ children }: { children: React.React
 
     const addPin = useCallback((pin: MapPin) => {
         setPins(old => [...old, pin]);
+    }, []);
+
+    const editPin = useCallback((pinId: string, pinOrSetter: MapPin | ((oldPin: MapPin) => MapPin)) => {
+        setPins(old => {
+            let updatedPin: MapPin;
+            if (typeof pinOrSetter === "function") {
+                const oldPin = old.find(pin => pin.id === pinId);
+                if (oldPin === undefined) return old;
+                updatedPin = pinOrSetter(oldPin);
+            }
+            else {
+                updatedPin = pinOrSetter;
+            }
+            return [...old.filter(pin => pin.id !== pinId), updatedPin];
+        });
     }, []);
 
     const removePin = useCallback((pinId: string) => {
@@ -218,10 +250,12 @@ export function MapExplorerContextProvider({ children }: { children: React.React
         camera,
         pins,
         locked,
+        config: fullConfig,
         setCamera,
         loadImage,
         setPins,
         addPin,
+        editPin,
         removePin,
         setLocked,
         toggleLocked,
@@ -239,10 +273,12 @@ export function MapExplorerContextProvider({ children }: { children: React.React
         camera,
         pins,
         locked,
+        fullConfig,
         setCamera,
         loadImage,
         setPins,
         addPin,
+        editPin,
         removePin,
         setLocked,
         toggleLocked,
@@ -259,7 +295,7 @@ export function MapExplorerContextProvider({ children }: { children: React.React
     ]);
 
     return <MapExplorerContext.Provider value={memoizedValue}>
-        { children }
+        { props.children }
     </MapExplorerContext.Provider>;
 }
 
