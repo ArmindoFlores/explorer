@@ -2,6 +2,7 @@ import { MapPin, MapPinIcon } from "./MapPinIcon";
 import { faExpand, faLocationDot, faLock, faLockOpen, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize } from "@fortawesome/free-solid-svg-icons";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
+import { EditPinModal } from "./EditPinModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getMouseEventCoordinates } from "../utils";
 import styles from "./MapExplorer.module.css";
@@ -10,6 +11,7 @@ import { useMapExplorer } from "./MapExplorerContext";
 const ZOOM_SENSITIVITY = 1200;
 
 export type ResizeValue = "none" | "both" | "horizontal" | "vertical";
+type ModalType = "EDIT_MAP_PIN";
 
 export interface MapExplorerProps {
     width?: number | string;
@@ -17,6 +19,7 @@ export interface MapExplorerProps {
     className?: string | undefined;
     image?: string;
     resize?: ResizeValue;
+    onEditPin?: (pin: MapPin) => Promise<MapPin|null>;
 }
 
 interface CanvasControlOverlayProps {
@@ -80,7 +83,7 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
     );
 });
 
-const CanvasMapOverlay = memo(() => {
+const CanvasMapOverlay = memo(({ editPin }: { editPin: (mapPin: MapPin) => void }) => {
     const { pins } = useMapExplorer();
 
     return <div className={styles.canvasMapOverlay}>
@@ -89,6 +92,7 @@ const CanvasMapOverlay = memo(() => {
                 <MapPinIcon
                     key={pin.id}
                     pin={pin}
+                    onEdit={() => editPin(pin)}
                 />
             ))
         }
@@ -99,6 +103,7 @@ export function MapExplorer(props: MapExplorerProps) {
     const {
         loadImage,
         addPin,
+        editPin,
         setCamera,
         zoom,
         $canvas,
@@ -111,6 +116,8 @@ export function MapExplorer(props: MapExplorerProps) {
 
     const [isDragging, setIsDragging] = useState(false);
     const [isAddingLocation, setIsAddingLocation] = useState(false);
+    const [openedModal, setOpenedModal] = useState<ModalType|null>(null);
+    const [selectedPin, setSelectedPin] = useState<MapPin|null>(null);
     
     const toggleAddLocation = useCallback(() => {
         setIsAddingLocation(old => !old);
@@ -177,6 +184,11 @@ export function MapExplorer(props: MapExplorerProps) {
 
     }, [setCamera, $canvas, zoom]);
 
+    const startEditingPin = useCallback((mapPin: MapPin) => {
+        setSelectedPin(mapPin);
+        setOpenedModal("EDIT_MAP_PIN");
+    }, []);
+
     useEffect(() => {
         if ($canvas != null && props.image != undefined) {
             loadImage(props.image);
@@ -196,11 +208,20 @@ export function MapExplorer(props: MapExplorerProps) {
                 onTouchEnd={handleMapStopDrag}
                 onTouchMove={handleMapDrag}
             />
-            <CanvasMapOverlay />
+            <CanvasMapOverlay editPin={startEditingPin} />
             <CanvasControlOverlay
                 toggleAddLocation={toggleAddLocation}
                 isAddingLocation={isAddingLocation}
             />
+            {
+                openedModal === "EDIT_MAP_PIN" &&
+                <EditPinModal
+                    isOpen={openedModal === "EDIT_MAP_PIN"}
+                    onRequestClose={() => setOpenedModal(null)}
+                    pin={selectedPin!}
+                    onCommit={(updatedPin) => editPin(updatedPin.id, updatedPin)}
+                />
+            }
         </div>
     );
 }

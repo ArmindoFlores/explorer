@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getMouseEventCoordinates, type Vector2 } from "../utils";
-import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
+import { faLocationDot, faPencil } from "@fortawesome/free-solid-svg-icons";
 import styles from "./MapPinIcon.module.css";
 import { useMapExplorer } from "./MapExplorerContext";
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +14,7 @@ export class MapPin {
     y: number;
     name: string;
     description: string;
+    visible: boolean;
     minZoom?: number;
     maxZoom?: number;
     
@@ -31,6 +32,7 @@ export class MapPin {
         this.description = description;
         this.x = x;
         this.y = y;
+        this.visible = true;
         this.maxZoom = maxZoom;
         this.minZoom = minZoom;
     }
@@ -43,7 +45,7 @@ function anchor(position: Vector2, size: Vector2, anchor: "top" | "bottom" = "to
     };
 }
 
-export function MapPinIcon({ pin }: { pin: MapPin }) {
+export function MapPinIcon({ pin, onEdit }: { pin: MapPin, onEdit: () => void }) {
     const pinRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
     const isClick = useRef(false);
@@ -113,6 +115,10 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
         editPin(pin.id, oldPin => ({ ...oldPin, x: oldPin.x + dx / camera.zoom, y: oldPin.y + dy / camera.zoom }));
     }, [isDragging, editPin, pin.id, camera.zoom]);
 
+    const handleEdit = useCallback(() => {
+        onEdit();
+    }, [onEdit]);
+
     useLayoutEffect(() => {
         if (pinRef.current === null) return;
         setPinSize({ x: pinRef.current.clientWidth, y: pinRef.current.clientHeight });
@@ -145,12 +151,20 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
                 onMouseLeave={() => setPopupHovered(false)}
             >
                 <div className={`${styles.popup} ${popupAnchorPosition === "bottom" ? styles.anchorBottom : styles.anchorTop}`}>
-                    <b>{pin.name}</b>
-                    <div>
+                    <section className={styles.header}>
+                        <b>{pin.name}</b>
+                        {
+                            config.canEdit &&
+                            <button className={styles.iconButton} onClick={handleEdit}>
+                                <FontAwesomeIcon icon={faPencil} />
+                            </button>
+                        }
+                    </section>
+                    <section className={styles.body}>
                         {
                             pin.description.split("\n\n").map((line, idx) => <p key={idx}>{line}</p>)
                         }
-                    </div>
+                    </section>
                 </div>
             </div>
             <div
@@ -164,7 +178,12 @@ export function MapPinIcon({ pin }: { pin: MapPin }) {
                 onTouchEnd={handleMapPinStopDrag}
                 onTouchMove={handleMapPinDrag}
             >
-                <FontAwesomeIcon icon={faLocationDot} stroke="black" strokeWidth={20} />
+                <FontAwesomeIcon
+                    className={!pin.visible ? styles.transparent : undefined}
+                    icon={faLocationDot}
+                    stroke="black"
+                    strokeWidth={20}
+                />
             </div>
         </>
     );

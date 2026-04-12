@@ -88,6 +88,24 @@
     margin-right: auto;
 }
 
+.iconButton {
+    color: white;
+    background: unset;
+    border: unset;
+    cursor: pointer;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
 .pin.hidden {
     display: none;
+}
+
+.transparent {
+    opacity: 0.5;
 }
