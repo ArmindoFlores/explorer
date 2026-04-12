@@ -5,7 +5,7 @@ import { getMouseEventCoordinates, type Vector2 } from "../utils";
 import { faLocationDot, faPencil } from "@fortawesome/free-solid-svg-icons";
 import styles from "./MapPinIcon.module.css";
 import { useMapExplorer } from "./MapExplorerContext";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export class MapPin {

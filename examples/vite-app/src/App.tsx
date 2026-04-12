@@ -1,7 +1,7 @@
-import { MapExplorer } from "./components/MapExplorer";
+import { MapExplorer, useMapExplorer } from "map-explorer";
+
 import styles from  "./App.module.css";
 import { useCallback } from "react";
-import { useMapExplorer } from "./components/MapExplorerContext";
 
 export function App() {
     const { pins } = useMapExplorer();

@@ -1,7 +1,7 @@
 import "./index.css";
 
 import { App } from "./App.tsx";
-import { MapExplorerContextProvider, type MapExplorerConfig } from "./components/MapExplorerContext.tsx";
+import { MapExplorerContextProvider, type MapExplorerConfig } from "map-explorer";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
