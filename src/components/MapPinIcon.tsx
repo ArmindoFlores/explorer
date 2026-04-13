@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getMouseEventCoordinates, type Vector2 } from "../utils";
@@ -17,7 +24,7 @@ export class MapPin {
     visible: boolean;
     minZoom?: number;
     maxZoom?: number;
-    
+
     constructor(
         x: number,
         y: number,
@@ -36,21 +43,32 @@ export class MapPin {
         this.maxZoom = maxZoom;
         this.minZoom = minZoom;
     }
-};
+}
 
-function anchor(position: Vector2, size: Vector2, anchor: "top" | "bottom" = "top"): Vector2 {
+function anchor(
+    position: Vector2,
+    size: Vector2,
+    anchor: "top" | "bottom" = "top"
+): Vector2 {
     return {
         x: position.x - size.x / 2,
         y: position.y + (anchor === "bottom" ? 0 : -1) * size.y,
     };
 }
 
-export function MapPinIcon({ pin, onEdit }: { pin: MapPin, onEdit: () => void }) {
+export function MapPinIcon({
+    pin,
+    onEdit,
+}: {
+    pin: MapPin;
+    onEdit: () => void;
+}) {
     const pinRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
     const isClick = useRef(false);
-    const lastMousePosition = useRef<Vector2>({x: 0, y: 0});
-    const { $canvasSize, $worldToCanvas, camera, editPin, locked, config } = useMapExplorer();
+    const lastMousePosition = useRef<Vector2>({ x: 0, y: 0 });
+    const { $canvasSize, $worldToCanvas, camera, editPin, locked, config } =
+        useMapExplorer();
 
     const [pinSize, setPinSize] = useState<Vector2>({ x: 0, y: 0 });
     const [popupSize, setPopupSize] = useState<Vector2>({ x: 0, y: 0 });
@@ -59,17 +77,31 @@ export function MapPinIcon({ pin, onEdit }: { pin: MapPin, onEdit: () => void })
     const [pinHovered, setPinHovered] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
-    const pinCanvasPosition = useMemo(() => $worldToCanvas(pin), [$worldToCanvas, pin]);
+    const pinCanvasPosition = useMemo(
+        () => $worldToCanvas(pin),
+        [$worldToCanvas, pin]
+    );
     const popupAnchorPosition = useMemo(
-        () => pinCanvasPosition.y >= $canvasSize.y / 2 ? "top" : "bottom",
+        () => (pinCanvasPosition.y >= $canvasSize.y / 2 ? "top" : "bottom"),
         [$canvasSize.y, pinCanvasPosition]
     );
-    const {x: pinX, y: pinY} = useMemo(() => anchor(pinCanvasPosition, pinSize), [pinCanvasPosition, pinSize]);
-    const {x: popupX, y: popupY} = useMemo(() => {
+    const { x: pinX, y: pinY } = useMemo(
+        () => anchor(pinCanvasPosition, pinSize),
+        [pinCanvasPosition, pinSize]
+    );
+    const { x: popupX, y: popupY } = useMemo(() => {
         if (popupAnchorPosition === "top") {
-            return anchor({ x: pinCanvasPosition.x, y: pinCanvasPosition.y - pinSize.y }, popupSize, popupAnchorPosition);
+            return anchor(
+                { x: pinCanvasPosition.x, y: pinCanvasPosition.y - pinSize.y },
+                popupSize,
+                popupAnchorPosition
+            );
         }
-        return anchor({ x: pinCanvasPosition.x, y: pinCanvasPosition.y }, popupSize, popupAnchorPosition);
+        return anchor(
+            { x: pinCanvasPosition.x, y: pinCanvasPosition.y },
+            popupSize,
+            popupAnchorPosition
+        );
     }, [popupAnchorPosition, pinCanvasPosition, popupSize, pinSize.y]);
 
     if (((!pinHovered && !popupHovered) || isDragging) && popupVisible) {
@@ -77,43 +109,79 @@ export function MapPinIcon({ pin, onEdit }: { pin: MapPin, onEdit: () => void })
     }
 
     const visible = useMemo(() => {
-        return (pin.maxZoom === undefined || camera.zoom <= pin.maxZoom) && (pin.minZoom === undefined || camera.zoom <= pin.minZoom);
+        return (
+            (pin.maxZoom === undefined || camera.zoom <= pin.maxZoom) &&
+            (pin.minZoom === undefined || camera.zoom <= pin.minZoom)
+        );
     }, [pin.minZoom, pin.maxZoom, camera.zoom]);
 
-    const handleMapPinStartDrag = useCallback((event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
-        const { x, y } = getMouseEventCoordinates(event);
-        setIsDragging(true);
-        lastMousePosition.current = { x, y };
-        isClick.current = true;
-    }, []);
-    
-    const handleMapPinClick = useCallback((event: MouseEvent | React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
-        if (event.type.startsWith("touch")) {
-            // on mobile, this should make the popup visible
-            setPopupVisible(true);
-            event.preventDefault();
-        }
-    }, []);
+    const handleMapPinStartDrag = useCallback(
+        (
+            event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>
+        ) => {
+            const { x, y } = getMouseEventCoordinates(event);
+            setIsDragging(true);
+            lastMousePosition.current = { x, y };
+            isClick.current = true;
+        },
+        []
+    );
 
-    const handleMapPinStopDrag = useCallback((event: MouseEvent | React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
-        if (isClick.current) {
-            handleMapPinClick(event);
-        }
-        setIsDragging(false);
-    }, [handleMapPinClick]);
+    const handleMapPinClick = useCallback(
+        (
+            event:
+                | MouseEvent
+                | React.MouseEvent<HTMLElement>
+                | React.TouchEvent<HTMLElement>
+        ) => {
+            if (event.type.startsWith("touch")) {
+                // on mobile, this should make the popup visible
+                setPopupVisible(true);
+                event.preventDefault();
+            }
+        },
+        []
+    );
 
-    const handleMapPinDrag = useCallback((event: MouseEvent | React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
-        if (!isDragging) return;
+    const handleMapPinStopDrag = useCallback(
+        (
+            event:
+                | MouseEvent
+                | React.MouseEvent<HTMLElement>
+                | React.TouchEvent<HTMLElement>
+        ) => {
+            if (isClick.current) {
+                handleMapPinClick(event);
+            }
+            setIsDragging(false);
+        },
+        [handleMapPinClick]
+    );
 
-        const { x: clientX, y: clientY } = getMouseEventCoordinates(event);
-        const dx = clientX - lastMousePosition.current.x;
-        const dy = clientY - lastMousePosition.current.y;
+    const handleMapPinDrag = useCallback(
+        (
+            event:
+                | MouseEvent
+                | React.MouseEvent<HTMLElement>
+                | React.TouchEvent<HTMLElement>
+        ) => {
+            if (!isDragging) return;
 
-        lastMousePosition.current = { x: clientX, y: clientY };
-        isClick.current = false;
+            const { x: clientX, y: clientY } = getMouseEventCoordinates(event);
+            const dx = clientX - lastMousePosition.current.x;
+            const dy = clientY - lastMousePosition.current.y;
 
-        editPin(pin.id, oldPin => ({ ...oldPin, x: oldPin.x + dx / camera.zoom, y: oldPin.y + dy / camera.zoom }));
-    }, [isDragging, editPin, pin.id, camera.zoom]);
+            lastMousePosition.current = { x: clientX, y: clientY };
+            isClick.current = false;
+
+            editPin(pin.id, (oldPin) => ({
+                ...oldPin,
+                x: oldPin.x + dx / camera.zoom,
+                y: oldPin.y + dy / camera.zoom,
+            }));
+        },
+        [isDragging, editPin, pin.id, camera.zoom]
+    );
 
     const handleEdit = useCallback(() => {
         onEdit();
@@ -121,60 +189,81 @@ export function MapPinIcon({ pin, onEdit }: { pin: MapPin, onEdit: () => void })
 
     useLayoutEffect(() => {
         if (pinRef.current === null) return;
-        setPinSize({ x: pinRef.current.clientWidth, y: pinRef.current.clientHeight });
+        setPinSize({
+            x: pinRef.current.clientWidth,
+            y: pinRef.current.clientHeight,
+        });
     }, []);
 
     useLayoutEffect(() => {
         if (popupRef.current === null) return;
-        setPopupSize({ x: popupRef.current.clientWidth, y: popupRef.current.clientHeight });
+        setPopupSize({
+            x: popupRef.current.clientWidth,
+            y: popupRef.current.clientHeight,
+        });
     }, [popupVisible]);
 
     useEffect(() => {
         if (!isDragging) return;
 
-        document.addEventListener('mousemove', handleMapPinDrag);
-        document.addEventListener('mouseup', handleMapPinStopDrag);
+        document.addEventListener("mousemove", handleMapPinDrag);
+        document.addEventListener("mouseup", handleMapPinStopDrag);
 
         return () => {
-            document.removeEventListener('mousemove', handleMapPinDrag);
-            document.removeEventListener('mouseup', handleMapPinStopDrag);
+            document.removeEventListener("mousemove", handleMapPinDrag);
+            document.removeEventListener("mouseup", handleMapPinStopDrag);
         };
     }, [handleMapPinDrag, handleMapPinStopDrag, isDragging]);
-    
+
     return (
         <>
             <div
                 ref={popupRef}
-                className={`${styles.popupContainer} ${!popupVisible ? styles.hidden : ''}`}
+                className={`${styles.popupContainer} ${!popupVisible ? styles.hidden : ""}`}
                 style={{ top: popupY, left: popupX }}
                 onMouseEnter={() => setPopupHovered(true)}
                 onMouseLeave={() => setPopupHovered(false)}
             >
-                <div className={`${styles.popup} ${popupAnchorPosition === "bottom" ? styles.anchorBottom : styles.anchorTop}`}>
+                <div
+                    className={`${styles.popup} ${popupAnchorPosition === "bottom" ? styles.anchorBottom : styles.anchorTop}`}
+                >
                     <section className={styles.header}>
                         <b>{pin.name}</b>
-                        {
-                            config.canEdit &&
-                            <button className={styles.iconButton} onClick={handleEdit}>
+                        {config.canEdit && (
+                            <button
+                                className={styles.iconButton}
+                                onClick={handleEdit}
+                            >
                                 <FontAwesomeIcon icon={faPencil} />
                             </button>
-                        }
+                        )}
                     </section>
                     <section className={styles.body}>
-                        {
-                            pin.description.split("\n\n").map((line, idx) => <p key={idx}>{line}</p>)
-                        }
+                        {pin.description.split("\n\n").map((line, idx) => (
+                            <p key={idx}>{line}</p>
+                        ))}
                     </section>
                 </div>
             </div>
             <div
                 ref={pinRef}
-                className={`${styles.pin} ${!visible ? styles.hidden : ''}`}
+                className={`${styles.pin} ${!visible ? styles.hidden : ""}`}
                 style={{ top: pinY, left: pinX }}
-                onMouseEnter={() => { setPinHovered(true); setPopupVisible(true); }}
+                onMouseEnter={() => {
+                    setPinHovered(true);
+                    setPopupVisible(true);
+                }}
                 onMouseLeave={() => setPinHovered(false)}
-                onMouseDown={!locked && config.canEdit ? handleMapPinStartDrag : undefined}
-                onTouchStart={!locked && config.canEdit ? handleMapPinStartDrag : undefined}
+                onMouseDown={
+                    !locked && config.canEdit
+                        ? handleMapPinStartDrag
+                        : undefined
+                }
+                onTouchStart={
+                    !locked && config.canEdit
+                        ? handleMapPinStartDrag
+                        : undefined
+                }
                 onTouchEnd={handleMapPinStopDrag}
                 onTouchMove={handleMapPinDrag}
             >

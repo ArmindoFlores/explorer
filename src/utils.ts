@@ -23,8 +23,11 @@ function isPlainObject(val: unknown): val is object {
     return typeof val === "object" && val !== null && !Array.isArray(val);
 }
 
-export function deepMerge<T extends object>(defaults: T, overrides: DeepPartial<T>): T {
-    const result = {...defaults};
+export function deepMerge<T extends object>(
+    defaults: T,
+    overrides: DeepPartial<T>
+): T {
+    const result = { ...defaults };
 
     for (const key in overrides) {
         const overrideValue = overrides[key];
@@ -48,10 +51,15 @@ function getNativeEvent(event: Event | React.SyntheticEvent): Event {
 }
 
 function isMouseEvent(event: MouseEvent | TouchEvent): event is MouseEvent {
-    return (event as MouseEvent).clientX !== undefined && (event as MouseEvent).clientY !== undefined;
+    return (
+        (event as MouseEvent).clientX !== undefined &&
+        (event as MouseEvent).clientY !== undefined
+    );
 }
 
-export function getMouseEventCoordinates<E extends HTMLElement>(event: MouseEvent | React.MouseEvent<E> | React.TouchEvent<E>): Vector2 {
+export function getMouseEventCoordinates<E extends HTMLElement>(
+    event: MouseEvent | React.MouseEvent<E> | React.TouchEvent<E>
+): Vector2 {
     const nativeEvent = getNativeEvent(event) as MouseEvent | TouchEvent;
 
     if (isMouseEvent(nativeEvent)) {
@@ -60,11 +68,11 @@ export function getMouseEventCoordinates<E extends HTMLElement>(event: MouseEven
     if (nativeEvent.type === "touchend") {
         return {
             x: nativeEvent.changedTouches[0].clientX,
-            y: nativeEvent.changedTouches[0].clientY
+            y: nativeEvent.changedTouches[0].clientY,
         };
     }
     return {
         x: nativeEvent.touches[0].clientX,
-        y: nativeEvent.touches[0].clientY
+        y: nativeEvent.touches[0].clientY,
     };
 }
