@@ -9,5 +9,6 @@ export default defineConfig({
         alias: {
             "map-explorer": path.resolve(__dirname, "../../src/index.ts"),
         },
+        dedupe: ["react", "react-dom"],
     },
 });
