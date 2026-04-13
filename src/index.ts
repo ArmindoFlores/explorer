@@ -7,3 +7,4 @@ export { MapPinIcon } from "./components/MapPinIcon";
 export * from "./utils";
 
 export type { MapExplorerConfig } from "./components/MapExplorerContext";
+export type { MapPin } from "./components/MapPinIcon";

@@ -16,6 +16,8 @@ export default defineConfig({
             external: [
                 "react",
                 "react-dom",
+                "react/jsx-runtime",
+                "react-modal",
                 "@fortawesome/fontawesome-svg-core",
                 "@fortawesome/free-solid-svg-icons",
                 "@fortawesome/react-fontawesome",
