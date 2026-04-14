@@ -117,11 +117,13 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
 
 const Ruler = memo((props: RulerProps) => {
     const { camera, $canvasToWorld, scale, unit } = useMapExplorer();
+    const { clearRuler } = props;
 
     useEffect(() => {
-        props.clearRuler();
-    }, [camera]);
+        clearRuler();
+    }, [camera, clearRuler]);
 
+    
     const { start, end } = props.ruler;
 
     const text = useMemo(() => {
@@ -131,8 +133,8 @@ const Ruler = memo((props: RulerProps) => {
         return `${(distance(startWorld, endWorld) * scale).toFixed(1)}${unit ? " " + unit : ""}`;
     }, [start, end, unit, $canvasToWorld, scale]);
 
-    const dx = useMemo(() => end?.x != undefined && start?.x != undefined ? end.x - start.x : null, [start?.x, end?.x]);
-    const dy = useMemo(() => end?.y != undefined && start?.y != undefined ? end.y - start.y : null, [start?.y, end?.y]);
+    const dx = useMemo(() => end != null && start != null ? end.x - start.x : null, [start, end]);
+    const dy = useMemo(() => end != null && start != null ? end.y - start.y : null, [start, end]);
 
     const ticks = useMemo(() => {
         if (dx == null || dy == null || start == null) {
@@ -164,7 +166,7 @@ const Ruler = memo((props: RulerProps) => {
         }
 
         return ticksArray;
-    }, [start, end, dx, dy]);
+    }, [start, dx, dy]);
 
     if (!start || !end || dx == null || dy == null) return null;
 
@@ -245,6 +247,7 @@ const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
     const { pins } = useMapExplorer();
 
     return <div className={styles.canvasMapOverlay}>
+        <Ruler ruler={props.ruler} clearRuler={props.clearRuler} />
         {
             pins.map(pin => (
                 <MapPinIcon
@@ -254,7 +257,6 @@ const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
                 />
             ))
         }
-        <Ruler ruler={props.ruler} clearRuler={props.clearRuler} />
     </div>;
 });
 
@@ -347,7 +349,7 @@ export function MapExplorer(props: MapExplorerProps) {
             const coords = $clientToCanvas({ x: clientX, y: clientY });
             setRulerEndPosition(coords);
         }
-    }, [isMeasuring, isDragging, setCamera]);
+    }, [isMeasuring, isDragging, setCamera, $clientToCanvas]);
 
     const handleMapZoom = useCallback(
         (event: React.WheelEvent<HTMLCanvasElement>) => {

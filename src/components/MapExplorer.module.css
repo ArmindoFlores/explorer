@@ -105,7 +105,6 @@
 
     pointer-events: none;
     overflow: visible;
-    z-index: 5;
 }
 
 .rulerText {
