@@ -21,7 +21,7 @@
     overflow: hidden;
 }
 
-.canvasMapOverlay > * {
+.canvasMapOverlay>* {
     pointer-events: auto;
 }
 
@@ -41,7 +41,7 @@
     padding: 1em;
 }
 
-.canvasControlOverlay > * {
+.canvasControlOverlay>* {
     pointer-events: auto;
 }
 
@@ -91,4 +91,27 @@
 
 .button.active {
     outline: 2px solid #eeeeee;
+}
+
+.ruler {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+
+    width: 100%;
+    height: 100%;
+
+    pointer-events: none;
+    overflow: visible;
+    z-index: 5;
+}
+
+.rulerText {
+    font-size: large;
+    fill: black;
+    stroke: white;
+    stroke-width: 4;
+    paint-order: stroke;
 }

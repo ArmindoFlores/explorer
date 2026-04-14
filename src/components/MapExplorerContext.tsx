@@ -28,7 +28,9 @@ export interface MapExplorerContextType {
     pins: MapPin[];
     locked: boolean;
     config: MapExplorerConfig;
-
+    scale: number;
+    unit: string | null;
+    
     loadImage: (src: string) => void;
     setCamera: (
         cameraOrSetter: Camera | ((oldCamera: Camera) => Camera)
@@ -46,6 +48,8 @@ export interface MapExplorerContextType {
         lockedOrSetter: boolean | ((oldLocked: boolean) => boolean)
     ) => void;
     toggleLocked: () => void;
+    setScale: (scaleOrSetter: number | ((oldScale: number) => number)) => void;
+    setUnit: (unitOrSetter: string|null | ((oldUnit: string|null) => string|null)) => void;
     zoom: (amount: number, redraw?: boolean) => number;
     fitToScreen: () => void;
 
@@ -104,6 +108,8 @@ export function MapExplorerContextProvider(
     const [pins, setPins] = useState<MapPin[]>([]);
     const [camera, _setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 });
     const [canvasSize, setCanvasSize] = useState<Vector2>({ x: 0, y: 0 });
+    const [scale, setScale] = useState(0.25);
+    const [unit, setUnit] = useState<string|null>("km");
 
     const fullConfig = useMemo(
         () => deepMerge(DEFAULT_MAP_EXPLORER_CONFIG, props.config ?? {}),
@@ -303,56 +309,57 @@ export function MapExplorerContextProvider(
         draw();
     }, [camera, draw]);
 
-    const memoizedValue: MapExplorerContextType = useMemo(
-        () => ({
-            camera,
-            pins,
-            locked,
-            config: fullConfig,
-            setCamera,
-            loadImage,
-            setPins,
-            addPin,
-            editPin,
-            removePin,
-            setLocked,
-            toggleLocked,
-            zoom,
-            fitToScreen,
-            $canvas: canvas,
-            $setCanvas: setCanvas,
-            $updateCamera: updateCamera,
-            $draw: draw,
-            $clientToCanvas: clientToCanvas,
-            $canvasToWorld: canvasToWorld,
-            $canvasSize: canvasSize,
-            $worldToCanvas: worldToCanvas,
-        }),
-        [
-            camera,
-            pins,
-            locked,
-            fullConfig,
-            setCamera,
-            loadImage,
-            setPins,
-            addPin,
-            editPin,
-            removePin,
-            setLocked,
-            toggleLocked,
-            zoom,
-            fitToScreen,
-            canvas,
-            setCanvas,
-            updateCamera,
-            draw,
-            clientToCanvas,
-            canvasToWorld,
-            canvasSize,
-            worldToCanvas,
-        ]
-    );
+    const memoizedValue: MapExplorerContextType = useMemo(() => ({
+        camera,
+        pins,
+        locked,
+        config: fullConfig,
+        scale,
+        unit,
+        setCamera,
+        loadImage,
+        setPins,
+        addPin,
+        editPin,
+        removePin,
+        setLocked,
+        toggleLocked,
+        setScale,
+        setUnit,
+        zoom,
+        fitToScreen,
+        $canvas: canvas,
+        $setCanvas: setCanvas,
+        $updateCamera: updateCamera,
+        $draw: draw,
+        $clientToCanvas: clientToCanvas,
+        $canvasToWorld: canvasToWorld,
+        $canvasSize: canvasSize,
+        $worldToCanvas: worldToCanvas,
+    }), [
+        camera,
+        pins,
+        locked,
+        fullConfig,
+        setCamera,
+        loadImage,
+        setPins,
+        addPin,
+        editPin,
+        removePin,
+        setLocked,
+        toggleLocked,
+        zoom,
+        fitToScreen,
+        canvas,
+        setCanvas,
+        updateCamera,
+        draw,
+        clientToCanvas,
+        canvasToWorld,
+        canvasSize,
+        worldToCanvas,
+    ]);
 
     return (
         <MapExplorerContext.Provider value={memoizedValue}>
