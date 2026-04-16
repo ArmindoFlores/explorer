@@ -69,6 +69,7 @@
 }
 
 .button {
+    position: relative;
     background-color: #000000;
     color: #eeeeee;
     border: none;
@@ -82,14 +83,18 @@
     transition: outline-color 0.15s ease-in-out;
     outline: 1px solid transparent;
 
+    z-index: 0;
+
     cursor: pointer;
 }
 
 .button:hover {
+    z-index: 1;
     outline: 1px solid #eeeeee;
 }
 
 .button.active {
+    z-index: 1;
     outline: 2px solid #eeeeee;
 }
 

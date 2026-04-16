@@ -23,6 +23,7 @@ export class MapPin {
     name: string;
     description: string;
     visible: boolean;
+    metadata: string;
     minZoom?: number;
     maxZoom?: number;
 
@@ -31,13 +32,15 @@ export class MapPin {
         y: number,
         id: string | undefined = undefined,
         name: string | undefined = undefined,
-        description: string = "Hello world!\n\nWhat is going on?",
+        description: string = "",
+        metadata: string = "",
         maxZoom: number | undefined = undefined,
         minZoom: number | undefined = undefined
     ) {
         this.id = id ?? uuidv4();
         this.name = name ?? this.id;
         this.description = description;
+        this.metadata = metadata;
         this.x = x;
         this.y = y;
         this.visible = true;

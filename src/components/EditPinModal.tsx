@@ -14,12 +14,13 @@ type Props = {
 export function EditPinModal({ isOpen, pin, onRequestClose, onCommit }: Props) {
     const [name, setName] = useState(pin.name);
     const [description, setDescription] = useState(pin.description);
+    const [metadata, setMetadata] = useState(pin.metadata);
     const [visible, setVisible] = useState(pin.visible);
 
     function handleSubmit(e: React.SubmitEvent) {
         e.preventDefault();
         if (!pin) return;
-        onCommit({ ...pin, name, description, visible });
+        onCommit({ ...pin, name, description, metadata, visible });
         onRequestClose();
     }
 
@@ -67,7 +68,21 @@ export function EditPinModal({ isOpen, pin, onRequestClose, onCommit }: Props) {
                         className={styles.textarea}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Optional description…"
+                        placeholder="Optional description&hellip;"
+                        rows={3}
+                    />
+                </div>
+
+                <div className={styles.field}>
+                    <label className={styles.label} htmlFor="pin-metadata">
+                        Metadata
+                    </label>
+                    <textarea
+                        id="pin-metadata"
+                        className={styles.textarea}
+                        value={metadata}
+                        onChange={(e) => setMetadata(e.target.value)}
+                        placeholder="Optional metadata&hellip;"
                         rows={3}
                     />
                 </div>
