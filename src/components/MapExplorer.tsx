@@ -2,12 +2,12 @@ import { MapPin, MapPinIcon } from "./MapPinIcon";
 import { Vector2, distance, getMouseEventCoordinates } from "../utils";
 import { faExpand, faLocationDot, faLock, faLockOpen, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faMaximize, faRuler } from "@fortawesome/free-solid-svg-icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMapCamera, useMapExplorer, useMapPins } from "./MapExplorerContext";
 
+import { DeletePinModal } from "./DeletePinModal";
 import { EditPinModal } from "./EditPinModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import styles from "./MapExplorer.module.css";
-import { useMapCamera, useMapExplorer, useMapPins } from "./MapExplorerContext";
-import { DeletePinModal } from "./DeletePinModal";
 
 const ZOOM_SENSITIVITY = 1200;
 
@@ -22,6 +22,7 @@ export interface MapExplorerProps {
     image?: string;
     resize?: ResizeValue;
     onEditPin?: (pin: MapPin) => Promise<MapPin | null>;
+    onDeletePin?: (pin: MapPin) => Promise<boolean>;
 }
 
 interface CanvasControlOverlayProps {
@@ -288,6 +289,8 @@ export function MapExplorer(props: MapExplorerProps) {
     const [rulerStartPosition, setRulerStartPosition] = useState<Vector2 | null>(null);
     const [rulerEndPosition, setRulerEndPosition] = useState<Vector2 | null>(null);
 
+    const { onEditPin, onDeletePin } = props;
+
     const clearRuler = useCallback(() => {
         setRulerStartPosition(null);
         setRulerEndPosition(null);
@@ -370,14 +373,24 @@ export function MapExplorer(props: MapExplorerProps) {
     );
 
     const startEditingPin = useCallback((mapPin: MapPin) => {
-        setSelectedPin(mapPin);
-        setOpenedModal("EDIT_MAP_PIN");
-    }, []);
+        if (onEditPin === undefined) {
+            setSelectedPin(mapPin);
+            setOpenedModal("EDIT_MAP_PIN");
+        }
+        else {
+            onEditPin(mapPin).then(newPin => newPin ? editPin(mapPin.id, newPin) : null);
+        }
+    }, [onEditPin, editPin]);
 
     const startDeletingPin = useCallback((mapPin: MapPin) => {
-        setSelectedPin(mapPin);
-        setOpenedModal("DELETE_MAP_PIN");
-    }, []);
+        if (onDeletePin === undefined) {
+            setSelectedPin(mapPin);
+            setOpenedModal("DELETE_MAP_PIN");
+        }
+        else {
+            onDeletePin(mapPin).then(deleted => deleted ? removePin(mapPin.id) : null);
+        }
+    }, [onDeletePin, removePin]);
 
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
         if (event.code === "Space") {

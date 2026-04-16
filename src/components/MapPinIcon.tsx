@@ -240,7 +240,7 @@ export const MapPinIcon = memo(({
                     <section className={styles.header}>
                         <b>{pin.name}</b>
                         {config.canEdit && !locked && (
-                            <div>
+                            <div className={styles.buttonContainer}>
                                 <button
                                     className={styles.iconButton}
                                     onClick={handleEdit}
