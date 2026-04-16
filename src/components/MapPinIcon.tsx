@@ -1,4 +1,5 @@
 import {
+    memo,
     useCallback,
     useEffect,
     useLayoutEffect,
@@ -11,7 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getMouseEventCoordinates, type Vector2 } from "../utils";
 import { faLocationDot, faPencil, faTrash } from "@fortawesome/free-solid-svg-icons";
 import styles from "./MapPinIcon.module.css";
-import { useMapExplorer } from "./MapExplorerContext";
+import { useMapCamera, useMapExplorer } from "./MapExplorerContext";
 import { v4 as uuidv4 } from "uuid";
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -56,21 +57,21 @@ function anchor(
     };
 }
 
-export function MapPinIcon({
+export const MapPinIcon = memo(({
     pin,
     onEdit,
     onDelete,
 }: {
     pin: MapPin;
-    onEdit: () => void;
-    onDelete: () => void;
-}) {
+    onEdit: (pin: MapPin) => void;
+    onDelete: (pin: MapPin) => void;
+}) => {
     const pinRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
     const isClick = useRef(false);
     const lastMousePosition = useRef<Vector2>({ x: 0, y: 0 });
-    const { $canvasSize, $worldToCanvas, camera, editPin, locked, config } =
-        useMapExplorer();
+    const { $canvasSize, editPin, locked, config } = useMapExplorer();
+    const { camera, $worldToCanvas } = useMapCamera();
 
     const [pinSize, setPinSize] = useState<Vector2>({ x: 0, y: 0 });
     const [popupSize, setPopupSize] = useState<Vector2>({ x: 0, y: 0 });
@@ -186,12 +187,12 @@ export function MapPinIcon({
     );
 
     const handleEdit = useCallback(() => {
-        onEdit();
-    }, [onEdit]);
+        onEdit(pin);
+    }, [onEdit, pin]);
 
     const handleTryDelete = useCallback(() => {
-        onDelete();
-    }, [onDelete]);
+        onDelete(pin);
+    }, [onDelete, pin]);
 
     useLayoutEffect(() => {
         if (pinRef.current === null) return;
@@ -290,4 +291,6 @@ export function MapPinIcon({
             </div>
         </>
     );
-}
+});
+
+MapPinIcon.displayName = "MapPinIcon";

@@ -6,7 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditPinModal } from "./EditPinModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import styles from "./MapExplorer.module.css";
-import { useMapExplorer } from "./MapExplorerContext";
+import { useMapCamera, useMapExplorer, useMapPins } from "./MapExplorerContext";
 import { DeletePinModal } from "./DeletePinModal";
 
 const ZOOM_SENSITIVITY = 1200;
@@ -47,7 +47,7 @@ interface RulerProps {
 const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
     const { zoom, fitToScreen, locked, toggleLocked, config } =
         useMapExplorer();
-
+    
     return (
         <div className={styles.canvasControlOverlay}>
             <div className={styles.canvasControlOverlayColumn}>
@@ -118,14 +118,14 @@ const CanvasControlOverlay = memo((props: CanvasControlOverlayProps) => {
 });
 
 const Ruler = memo((props: RulerProps) => {
-    const { camera, $canvasToWorld, scale, unit } = useMapExplorer();
+    const { scale, unit } = useMapExplorer();
+    const { camera, $canvasToWorld } = useMapCamera();
     const { clearRuler } = props;
 
     useEffect(() => {
         clearRuler();
     }, [camera, clearRuler]);
 
-    
     const { start, end } = props.ruler;
 
     const text = useMemo(() => {
@@ -246,7 +246,7 @@ const Ruler = memo((props: RulerProps) => {
 });
 
 const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
-    const { pins } = useMapExplorer();
+    const pins = useMapPins();
 
     return <div className={styles.canvasMapOverlay}>
         <Ruler ruler={props.ruler} clearRuler={props.clearRuler} />
@@ -255,8 +255,8 @@ const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
                 <MapPinIcon
                     key={pin.id}
                     pin={pin}
-                    onEdit={() => props.editPin(pin)}
-                    onDelete={() => props.deletePin(pin)}
+                    onEdit={props.editPin}
+                    onDelete={props.deletePin}
                 />
             ))
         }
@@ -273,9 +273,9 @@ export function MapExplorer(props: MapExplorerProps) {
         zoom,
         $canvas,
         $setCanvas,
-        $canvasToWorld,
         $clientToCanvas,
     } = useMapExplorer();
+    const { $canvasToWorld } = useMapCamera();
     const lastMousePosition = useRef({ x: 0, y: 0 });
     const isClick = useRef(false);
 
@@ -345,7 +345,7 @@ export function MapExplorer(props: MapExplorerProps) {
 
                 lastMousePosition.current = { x: clientX, y: clientY };
                 isClick.current = false;
-                return camera;
+                return {...camera};
             });
         }
         else if (isMeasuring) {
@@ -357,24 +357,16 @@ export function MapExplorer(props: MapExplorerProps) {
 
     const handleMapZoom = useCallback(
         (event: React.WheelEvent<HTMLCanvasElement>) => {
-            setCamera((camera) => {
-                if ($canvas === null) return camera;
-                const rect = $canvas.getBoundingClientRect();
+            if ($canvas === null) return;
 
-                const mouseX = event.clientX - rect.left;
-                const mouseY = event.clientY - rect.top;
+            const rect = $canvas.getBoundingClientRect();
 
-                const worldX = (mouseX - camera.x) / camera.zoom;
-                const worldY = (mouseY - camera.y) / camera.zoom;
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
 
-                camera.zoom = zoom(-event.deltaY / ZOOM_SENSITIVITY, false);
-
-                camera.x = mouseX - worldX * camera.zoom;
-                camera.y = mouseY - worldY * camera.zoom;
-                return camera;
-            });
+            zoom(-event.deltaY / ZOOM_SENSITIVITY, { x: mouseX, y: mouseY });
         },
-        [setCamera, $canvas, zoom]
+        [$canvas, zoom]
     );
 
     const startEditingPin = useCallback((mapPin: MapPin) => {

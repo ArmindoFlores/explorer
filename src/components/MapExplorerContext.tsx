@@ -24,8 +24,6 @@ export interface MapExplorerContextProviderProps {
 }
 
 export interface MapExplorerContextType {
-    camera: Camera;
-    pins: MapPin[];
     locked: boolean;
     config: MapExplorerConfig;
     scale: number;
@@ -50,22 +48,30 @@ export interface MapExplorerContextType {
     toggleLocked: () => void;
     setScale: (scaleOrSetter: number | ((oldScale: number) => number)) => void;
     setUnit: (unitOrSetter: string|null | ((oldUnit: string|null) => string|null)) => void;
-    zoom: (amount: number, redraw?: boolean) => number;
+    zoom: (amount: number, focus?: Vector2) => void;
     fitToScreen: () => void;
 
     // internals
     $canvas: HTMLCanvasElement | null;
     $canvasSize: Vector2;
     $setCanvas: (canvas: HTMLCanvasElement | null) => void;
-    $draw: () => void;
-    $updateCamera: () => void;
     $clientToCanvas: (coordinates: Vector2) => Vector2;
+}
+
+export interface MapCameraContextType {
+    camera: Camera;
     $canvasToWorld: (coordinates: Vector2) => Vector2;
     $worldToCanvas: (coordinates: Vector2) => Vector2;
 }
 
 const MapExplorerContext = createContext<MapExplorerContextType | null>(null);
 const useMapExplorer_ = () => useContext(MapExplorerContext);
+
+const MapExplorerCameraContext = createContext<MapCameraContextType | null>(null);
+const useMapCamera_ = () => useContext(MapExplorerCameraContext);
+
+const MapExplorerPinsContext = createContext<MapPin[] | null>(null);
+const useMapPins_ = () => useContext(MapExplorerPinsContext);
 
 const DEFAULT_MAP_EXPLORER_CONFIG: MapExplorerConfig = {
     canEdit: true,
@@ -100,13 +106,11 @@ export function MapExplorerContextProvider(
 ) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
-    const zoomRef = useRef<number>(1);
-    const panRef = useRef<Vector2>({ x: 0, y: 0 });
 
     const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
     const [locked, setLocked] = useState(false);
     const [pins, setPins] = useState<MapPin[]>([]);
-    const [camera, _setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 });
+    const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 });
     const [canvasSize, setCanvasSize] = useState<Vector2>({ x: 0, y: 0 });
     const [scale, setScale] = useState(0.25);
     const [unit, setUnit] = useState<string|null>("km");
@@ -119,6 +123,10 @@ export function MapExplorerContextProvider(
     useLayoutEffect(() => {
         canvasRef.current = canvas;
     }, [canvas]);
+
+    const updateCamera = useCallback(() => {
+        setCamera(old => ({...old}));
+    }, []);
 
     const toggleLocked = useCallback(() => {
         return setLocked((old) => !old);
@@ -149,110 +157,7 @@ export function MapExplorerContextProvider(
         setPins((old) => old.filter((pin) => pin.id !== pinId));
     }, []);
 
-    const updateCamera = useCallback(() => {
-        _setCamera({ ...panRef.current, zoom: zoomRef.current });
-    }, []);
-
-    const setCamera = useCallback(
-        (cameraOrSetter: Camera | ((oldCamera: Camera) => Camera)) => {
-            if (typeof cameraOrSetter === "function") {
-                const setter = cameraOrSetter;
-                _setCamera((oldCamera) => {
-                    const camera = setter({ ...oldCamera });
-                    panRef.current = { x: camera.x, y: camera.y };
-                    zoomRef.current = camera.zoom;
-                    return camera;
-                });
-            } else {
-                const camera = cameraOrSetter;
-                panRef.current = { x: camera.x, y: camera.y };
-                zoomRef.current = camera.zoom;
-                _setCamera(camera);
-            }
-        },
-        []
-    );
-
-    const draw = useCallback(() => {
-        const canvas = canvasRef.current;
-        const img = imageRef.current;
-
-        if (canvas === null || img === null) return;
-        const ctx = canvas.getContext("2d");
-        if (ctx === null) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        ctx.translate(panRef.current.x, panRef.current.y);
-        ctx.scale(zoomRef.current, zoomRef.current);
-        ctx.drawImage(img, 0, 0);
-        ctx.restore();
-    }, []);
-
-    const zoom = useCallback(
-        (amount: number, redraw: boolean = true) => {
-            if (canvasRef.current === null) return 1;
-
-            const zoomFactor = 1 + amount;
-            const previousZoom = zoomRef.current;
-            zoomRef.current = Math.max(zoomRef.current * zoomFactor, 0.01);
-
-            const realZoomFactor = zoomRef.current / previousZoom;
-            const centerX = canvasRef.current.width / 2;
-            const centerY = canvasRef.current.height / 2;
-
-            panRef.current.x =
-                centerX + (panRef.current.x - centerX) * realZoomFactor;
-            panRef.current.y =
-                centerY + (panRef.current.y - centerY) * realZoomFactor;
-
-            updateCamera();
-            if (redraw) {
-                draw();
-            }
-            return zoomRef.current;
-        },
-        [draw, updateCamera]
-    );
-
-    const fitToScreen = useCallback(() => {
-        if (canvasRef.current === null || imageRef.current === null) return;
-
-        zoomRef.current = fitZoom(canvasRef.current, imageRef.current, "cover");
-        panRef.current = fitPan(
-            canvasRef.current,
-            imageRef.current,
-            zoomRef.current,
-            "cover"
-        );
-        updateCamera();
-        draw();
-    }, [draw, updateCamera]);
-
-    const loadImage = useCallback(
-        (src: string) => {
-            const canvas = canvasRef.current;
-            if (canvas === null) {
-                throw new Error(
-                    `"loadImage()" can only be called after canvas initialization`
-                );
-            }
-
-            const img = new Image();
-            imageRef.current = img;
-            img.src = src;
-
-            img.onload = () => {
-                zoomRef.current = fitZoom(canvas, img, "cover");
-                panRef.current = fitPan(canvas, img, zoomRef.current, "cover");
-                updateCamera();
-                draw();
-            };
-        },
-        [updateCamera, draw]
-    );
-
-    const clientToCanvas = useCallback((coordinates: Vector2): Vector2 => {
+        const clientToCanvas = useCallback((coordinates: Vector2): Vector2 => {
         if (canvasRef.current === null) {
             throw new Error("canvas is not initialized");
         }
@@ -283,6 +188,83 @@ export function MapExplorerContextProvider(
         [camera]
     );
 
+    const draw = useCallback(() => {
+        const canvas = canvasRef.current;
+        const img = imageRef.current;
+
+        if (canvas === null || img === null) return;
+        const ctx = canvas.getContext("2d");
+        if (ctx === null) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(camera.x, camera.y);
+        ctx.scale(camera.zoom, camera.zoom);
+        ctx.drawImage(img, 0, 0);
+        ctx.restore();
+    }, [camera]);
+
+    const zoom = useCallback((amount: number, focus?: Vector2) => {
+        setCamera(camera => {
+            if (canvasRef.current === null) return camera;
+
+            const zoomFactor = 1 + amount;
+            const zoom = Math.max(camera.zoom * zoomFactor, 0.01);
+    
+            const realZoomFactor = zoom / camera.zoom;
+            const centerX = focus?.x ?? canvasRef.current.width / 2;
+            const centerY = focus?.y ?? canvasRef.current.height / 2;
+    
+            return {
+                zoom,
+                x: centerX + (camera.x - centerX) * realZoomFactor,
+                y: centerY + (camera.y - centerY) * realZoomFactor
+            };
+        });
+
+    }, []);
+
+    const fitToScreen = useCallback(() => {
+        setCamera(camera => {
+            if (canvasRef.current === null || imageRef.current === null) return camera;
+
+            const zoom = fitZoom(canvasRef.current, imageRef.current, "cover");
+            return {
+                zoom: zoom, 
+                ...fitPan(
+                    canvasRef.current,
+                    imageRef.current,
+                    zoom,
+                    "cover"
+                ),
+            };
+        });
+    }, []);
+
+    const loadImage = useCallback(
+        (src: string) => {
+            const canvas = canvasRef.current;
+            if (canvas === null) {
+                throw new Error(
+                    `"loadImage()" can only be called after canvas initialization`
+                );
+            }
+
+            const img = new Image();
+            imageRef.current = img;
+            img.src = src;
+
+            img.onload = () => {
+                const zoom = fitZoom(canvas, img, "cover");
+                setCamera({
+                    zoom,
+                    ...fitPan(canvas, img, zoom, "cover")
+                })
+            };
+        },
+        []
+    );
+
     useEffect(() => {
         if (canvas === null) return;
 
@@ -297,21 +279,19 @@ export function MapExplorerContextProvider(
             canvas.width = width;
             canvas.height = height;
             setCanvasSize({ x: canvas.width, y: canvas.height });
-            if (imageRef.current?.complete) draw();
+            updateCamera();
         });
 
         observer.observe(canvas);
 
         return () => observer.disconnect();
-    }, [canvas, draw]);
+    }, [canvas, updateCamera]);
 
     useEffect(() => {
         draw();
-    }, [camera, draw]);
-
-    const memoizedValue: MapExplorerContextType = useMemo(() => ({
-        camera,
-        pins,
+    }, [draw]);
+    
+    const memoizedExplorerContextValue: MapExplorerContextType = useMemo(() => ({
         locked,
         config: fullConfig,
         scale,
@@ -330,15 +310,9 @@ export function MapExplorerContextProvider(
         fitToScreen,
         $canvas: canvas,
         $setCanvas: setCanvas,
-        $updateCamera: updateCamera,
-        $draw: draw,
         $clientToCanvas: clientToCanvas,
-        $canvasToWorld: canvasToWorld,
         $canvasSize: canvasSize,
-        $worldToCanvas: worldToCanvas,
     }), [
-        camera,
-        pins,
         locked,
         unit,
         scale,
@@ -355,17 +329,27 @@ export function MapExplorerContextProvider(
         fitToScreen,
         canvas,
         setCanvas,
-        updateCamera,
-        draw,
         clientToCanvas,
-        canvasToWorld,
         canvasSize,
+    ]);
+
+    const memoizedCameraContextValue: MapCameraContextType = useMemo(() => ({
+        camera,
+        $canvasToWorld: canvasToWorld,
+        $worldToCanvas: worldToCanvas,
+    }), [
+        camera,
+        canvasToWorld,
         worldToCanvas,
     ]);
 
     return (
-        <MapExplorerContext.Provider value={memoizedValue}>
-            {props.children}
+        <MapExplorerContext.Provider value={memoizedExplorerContextValue}>
+            <MapExplorerPinsContext.Provider value={pins}>
+                <MapExplorerCameraContext.Provider value={memoizedCameraContextValue}>
+                    {props.children}
+                </MapExplorerCameraContext.Provider>
+            </MapExplorerPinsContext.Provider>
         </MapExplorerContext.Provider>
     );
 }
@@ -376,6 +360,28 @@ export function useMapExplorer() {
     if (ctx === null) {
         throw new Error(
             `"useMapExplorer()" must only be used inside a "MapExplorerContextProvider"`
+        );
+    }
+    return ctx;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useMapCamera() {
+    const ctx = useMapCamera_();
+    if (ctx === null) {
+        throw new Error(
+            `"useMapCamera()" must only be used inside a "MapExplorerContextProvider"`
+        );
+    }
+    return ctx;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useMapPins() {
+    const ctx = useMapPins_();
+    if (ctx === null) {
+        throw new Error(
+            `"useMapPins()" must only be used inside a "MapExplorerContextProvider"`
         );
     }
     return ctx;
