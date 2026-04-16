@@ -1,10 +1,10 @@
-import { MapExplorer, useMapExplorer } from "map-explorer";
+import { MapExplorer, useMapPins } from "map-explorer";
 
 import styles from  "./App.module.css";
 import { useCallback } from "react";
 
 export function App() {
-    const { pins } = useMapExplorer();
+    const pins = useMapPins();
 
     const onSave = useCallback(() => {
         console.log(pins);
