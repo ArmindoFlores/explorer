@@ -7,11 +7,12 @@ import { EditPinModal } from "./EditPinModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import styles from "./MapExplorer.module.css";
 import { useMapExplorer } from "./MapExplorerContext";
+import { DeletePinModal } from "./DeletePinModal";
 
 const ZOOM_SENSITIVITY = 1200;
 
 export type ResizeValue = "none" | "both" | "horizontal" | "vertical";
-type ModalType = "EDIT_MAP_PIN";
+type ModalType = "EDIT_MAP_PIN" | "DELETE_MAP_PIN";
 type MapTool = "ADD_PIN" | "MEASURE";
 
 export interface MapExplorerProps {
@@ -30,6 +31,7 @@ interface CanvasControlOverlayProps {
 
 interface CanvasMapOverlayProps {
     editPin: (mapPin: MapPin) => void;
+    deletePin: (mapPin: MapPin) => void;
     ruler: {
         start: Vector2 | null;
         end: Vector2 | null;
@@ -254,6 +256,7 @@ const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
                     key={pin.id}
                     pin={pin}
                     onEdit={() => props.editPin(pin)}
+                    onDelete={() => props.deletePin(pin)}
                 />
             ))
         }
@@ -265,6 +268,7 @@ export function MapExplorer(props: MapExplorerProps) {
         loadImage,
         addPin,
         editPin,
+        removePin,
         setCamera,
         zoom,
         $canvas,
@@ -378,6 +382,11 @@ export function MapExplorer(props: MapExplorerProps) {
         setOpenedModal("EDIT_MAP_PIN");
     }, []);
 
+    const startDeletingPin = useCallback((mapPin: MapPin) => {
+        setSelectedPin(mapPin);
+        setOpenedModal("DELETE_MAP_PIN");
+    }, []);
+
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
         if (event.code === "Space") {
             setSpacePressed(true);
@@ -422,7 +431,12 @@ export function MapExplorer(props: MapExplorerProps) {
                 onTouchEnd={handleMapStopDrag}
                 onTouchMove={handleMapDrag}
             />
-            <CanvasMapOverlay editPin={startEditingPin} ruler={{ start: rulerStartPosition, end: rulerEndPosition }} clearRuler={clearRuler} />
+            <CanvasMapOverlay
+                editPin={startEditingPin}
+                deletePin={startDeletingPin}
+                ruler={{ start: rulerStartPosition, end: rulerEndPosition }}
+                clearRuler={clearRuler}
+            />
             <CanvasControlOverlay
                 toggleActiveTool={toggleActiveTool}
                 activeTool={activeTool}
@@ -434,6 +448,16 @@ export function MapExplorer(props: MapExplorerProps) {
                     pin={selectedPin!}
                     onCommit={(updatedPin) =>
                         editPin(updatedPin.id, updatedPin)
+                    }
+                />
+            )}
+            {openedModal === "DELETE_MAP_PIN" && (
+                <DeletePinModal
+                    isOpen={openedModal === "DELETE_MAP_PIN"}
+                    onRequestClose={() => setOpenedModal(null)}
+                    pin={selectedPin!}
+                    onCommit={() =>
+                        removePin(selectedPin!.id)
                     }
                 />
             )}

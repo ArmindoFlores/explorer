@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 import type { MapPin } from "./MapPinIcon";
 import Modal from "react-modal";
-import styles from "./EditPinModal.module.css";
+import styles from "./BaseModal.module.css";
 
 type Props = {
     isOpen: boolean;

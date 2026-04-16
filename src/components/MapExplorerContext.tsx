@@ -340,6 +340,8 @@ export function MapExplorerContextProvider(
         camera,
         pins,
         locked,
+        unit,
+        scale,
         fullConfig,
         setCamera,
         loadImage,

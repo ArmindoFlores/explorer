@@ -9,7 +9,7 @@ import {
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getMouseEventCoordinates, type Vector2 } from "../utils";
-import { faLocationDot, faPencil } from "@fortawesome/free-solid-svg-icons";
+import { faLocationDot, faPencil, faTrash } from "@fortawesome/free-solid-svg-icons";
 import styles from "./MapPinIcon.module.css";
 import { useMapExplorer } from "./MapExplorerContext";
 import { v4 as uuidv4 } from "uuid";
@@ -59,9 +59,11 @@ function anchor(
 export function MapPinIcon({
     pin,
     onEdit,
+    onDelete,
 }: {
     pin: MapPin;
     onEdit: () => void;
+    onDelete: () => void;
 }) {
     const pinRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
@@ -187,6 +189,10 @@ export function MapPinIcon({
         onEdit();
     }, [onEdit]);
 
+    const handleTryDelete = useCallback(() => {
+        onDelete();
+    }, [onDelete]);
+
     useLayoutEffect(() => {
         if (pinRef.current === null) return;
         setPinSize({
@@ -229,13 +235,21 @@ export function MapPinIcon({
                 >
                     <section className={styles.header}>
                         <b>{pin.name}</b>
-                        {config.canEdit && (
-                            <button
-                                className={styles.iconButton}
-                                onClick={handleEdit}
-                            >
-                                <FontAwesomeIcon icon={faPencil} />
-                            </button>
+                        {config.canEdit && !locked && (
+                            <div>
+                                <button
+                                    className={styles.iconButton}
+                                    onClick={handleEdit}
+                                >
+                                    <FontAwesomeIcon icon={faPencil} />
+                                </button>
+                                <button
+                                    className={styles.iconButton}
+                                    onClick={handleTryDelete}
+                                >
+                                    <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                            </div>
                         )}
                     </section>
                     <section className={styles.body}>
