@@ -23,6 +23,7 @@ export interface MapExplorerProps {
     resize?: ResizeValue;
     onEditPin?: (pin: MapPin) => Promise<MapPin | null>;
     onDeletePin?: (pin: MapPin) => Promise<boolean>;
+    onClickPin?: (pin: MapPin) => void;
 }
 
 interface CanvasControlOverlayProps {
@@ -33,6 +34,7 @@ interface CanvasControlOverlayProps {
 interface CanvasMapOverlayProps {
     editPin: (mapPin: MapPin) => void;
     deletePin: (mapPin: MapPin) => void;
+    onClickPin?: (mapPin: MapPin) => void;
     ruler: {
         start: Vector2 | null;
         end: Vector2 | null;
@@ -258,6 +260,7 @@ const CanvasMapOverlay = memo((props: CanvasMapOverlayProps) => {
                     pin={pin}
                     onEdit={props.editPin}
                     onDelete={props.deletePin}
+                    onClick={props.onClickPin}
                 />
             ))
         }
@@ -439,6 +442,7 @@ export function MapExplorer(props: MapExplorerProps) {
             <CanvasMapOverlay
                 editPin={startEditingPin}
                 deletePin={startDeletingPin}
+                onClickPin={props.onClickPin}
                 ruler={{ start: rulerStartPosition, end: rulerEndPosition }}
                 clearRuler={clearRuler}
             />

@@ -64,10 +64,12 @@ export const MapPinIcon = memo(({
     pin,
     onEdit,
     onDelete,
+    onClick,
 }: {
     pin: MapPin;
     onEdit: (pin: MapPin) => void;
     onDelete: (pin: MapPin) => void;
+    onClick?: (pin: MapPin) => void;
 }) => {
     const pinRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
@@ -145,8 +147,11 @@ export const MapPinIcon = memo(({
                 setPopupVisible(true);
                 event.preventDefault();
             }
+            else {
+                onClick?.(pin);
+            }
         },
-        []
+        [onClick, pin]
     );
 
     const handleMapPinStopDrag = useCallback(

@@ -55,6 +55,7 @@ export function App() {
                 image="/Tayira.webp"
                 resize="both"
                 onEditPin={useCustomHandlers ? onEditPin : undefined}
+                onClickPin={pin => alert(JSON.stringify(pin))}
             />
             <br></br>
             <div className={styles.row}>
